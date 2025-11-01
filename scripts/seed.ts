@@ -1,7 +1,7 @@
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-import bcrypt from 'bcrypt';
-import { addDays, addHours } from 'date-fns';
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+const bcrypt = require('bcrypt');
+const dateFns = require('date-fns');
 
 // Load environment variables
 dotenv.config({ path: './apps/api/.env' });
@@ -41,13 +41,15 @@ async function seed() {
     });
     console.log('Created demo user:', user.email);
 
-    // Create tags
+    // Create tags with distinct color coding
     const tags = await Tag.insertMany([
-      { userId: user._id, name: 'work', color: '#3B82F6' },
-      { userId: user._id, name: 'school', color: '#10B981' },
-      { userId: user._id, name: 'personal', color: '#F59E0B' },
-      { userId: user._id, name: 'fitness', color: '#EF4444' },
-      { userId: user._id, name: 'project', color: '#8B5CF6' },
+      { userId: user._id, name: 'work', color: '#3B82F6' }, // Blue
+      { userId: user._id, name: 'health', color: '#10B981' }, // Green
+      { userId: user._id, name: 'side hustle', color: '#F59E0B' }, // Orange
+      { userId: user._id, name: 'school', color: '#8B5CF6' }, // Purple
+      { userId: user._id, name: 'personal', color: '#EC4899' }, // Pink
+      { userId: user._id, name: 'fitness', color: '#EF4444' }, // Red
+      { userId: user._id, name: 'project', color: '#06B6D4' }, // Cyan
     ]);
     console.log('Created tags:', tags.map((t: any) => t.name).join(', '));
 
@@ -62,8 +64,8 @@ async function seed() {
         status: 'in_progress' as const,
         priority: 4,
         tags: [tagMap.get('school')!],
-        dueAt: addDays(now, 2),
-        startAt: addDays(now, 1),
+        dueAt: dateFns.addDays(now, 2),
+        startAt: dateFns.addDays(now, 1),
         allDay: false,
         estimateMinutes: 120,
         actualMinutes: 45,
@@ -75,8 +77,8 @@ async function seed() {
         status: 'todo' as const,
         priority: 3,
         tags: [tagMap.get('work')!],
-        dueAt: addHours(now, 2),
-        startAt: addHours(now, 1),
+        dueAt: dateFns.addHours(now, 2),
+        startAt: dateFns.addHours(now, 1),
         allDay: false,
         estimateMinutes: 60,
         recurrence: {
@@ -91,9 +93,9 @@ async function seed() {
         description: 'Upper body strength training',
         status: 'todo' as const,
         priority: 2,
-        tags: [tagMap.get('fitness')!],
-        dueAt: addDays(now, 1),
-        startAt: addDays(now, 1),
+        tags: [tagMap.get('health')!],
+        dueAt: dateFns.addDays(now, 1),
+        startAt: dateFns.addDays(now, 1),
         allDay: true,
         estimateMinutes: 90,
         recurrence: {
@@ -104,13 +106,26 @@ async function seed() {
       },
       {
         userId: user._id,
+        title: 'Update freelance project',
+        description: 'Finish client website updates',
+        status: 'in_progress' as const,
+        priority: 4,
+        tags: [tagMap.get('side hustle')!],
+        dueAt: dateFns.addDays(now, 1),
+        startAt: dateFns.addDays(now, 0),
+        allDay: false,
+        estimateMinutes: 180,
+        actualMinutes: 60,
+      },
+      {
+        userId: user._id,
         title: 'Review project proposal',
         description: 'Review and provide feedback on the new project proposal',
         status: 'todo' as const,
         priority: 5,
         tags: [tagMap.get('work')!, tagMap.get('project')!],
-        dueAt: addDays(now, 3),
-        startAt: addDays(now, 3),
+        dueAt: dateFns.addDays(now, 3),
+        startAt: dateFns.addDays(now, 3),
         allDay: false,
         estimateMinutes: 180,
         checklist: [
@@ -126,8 +141,8 @@ async function seed() {
         status: 'done' as const,
         priority: 2,
         tags: [tagMap.get('personal')!],
-        dueAt: addDays(now, -1),
-        startAt: addDays(now, -1),
+        dueAt: dateFns.addDays(now, -1),
+        startAt: dateFns.addDays(now, -1),
         allDay: true,
         estimateMinutes: 60,
         actualMinutes: 45,
@@ -139,8 +154,8 @@ async function seed() {
         status: 'done' as const,
         priority: 4,
         tags: [tagMap.get('school')!],
-        dueAt: addDays(now, -2),
-        startAt: addDays(now, -3),
+        dueAt: dateFns.addDays(now, -2),
+        startAt: dateFns.addDays(now, -3),
         allDay: false,
         estimateMinutes: 120,
         actualMinutes: 105,
@@ -151,9 +166,9 @@ async function seed() {
         description: '5km morning run',
         status: 'todo' as const,
         priority: 1,
-        tags: [tagMap.get('fitness')!],
-        dueAt: addDays(now, 0),
-        startAt: addDays(now, 0),
+        tags: [tagMap.get('health')!],
+        dueAt: dateFns.addDays(now, 0),
+        startAt: dateFns.addDays(now, 0),
         allDay: false,
         estimateMinutes: 30,
         recurrence: {
@@ -168,8 +183,8 @@ async function seed() {
         status: 'in_progress' as const,
         priority: 3,
         tags: [tagMap.get('project')!],
-        dueAt: addDays(now, 4),
-        startAt: addDays(now, 2),
+        dueAt: dateFns.addDays(now, 4),
+        startAt: dateFns.addDays(now, 2),
         allDay: false,
         estimateMinutes: 90,
         actualMinutes: 30,

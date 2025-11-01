@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import { User } from '../models/User';
+import { Tag } from '../models/Tag';
 import { generateAccessToken, generateRefreshToken } from '../utils/jwt.util';
 import { AuthRequest } from '../middleware/auth.middleware';
 
@@ -27,6 +28,25 @@ export const signup = async (req: Request, res: Response, next: NextFunction) =>
       passwordHash,
       name,
     });
+
+    // Create default tags for new user
+    const defaultTags = [
+      { name: 'work', color: '#3B82F6' },
+      { name: 'health', color: '#10B981' },
+      { name: 'side hustle', color: '#F59E0B' },
+      { name: 'school', color: '#8B5CF6' },
+      { name: 'personal', color: '#EC4899' },
+      { name: 'fitness', color: '#EF4444' },
+      { name: 'project', color: '#06B6D4' },
+    ];
+
+    await Tag.insertMany(
+      defaultTags.map((tag) => ({
+        userId: user._id,
+        name: tag.name,
+        color: tag.color,
+      }))
+    );
 
     const accessToken = generateAccessToken(user._id.toString());
     const refreshToken = generateRefreshToken(user._id.toString());

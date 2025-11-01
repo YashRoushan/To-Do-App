@@ -1,7 +1,7 @@
 {
-    "name": "to-do-app",
-    "version": "0.1.0",
-    "private": true,
+  "name": "to-do-app",
+  "version": "0.1.0",
+  "private": true,
   "workspaces": [
     "apps/*"
   ],
@@ -12,13 +12,14 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.5.0"
   },
-    "scripts": {
+  "scripts": {
     "dev": "concurrently \"npm --workspace=apps/api run dev\" \"npm --workspace=apps/web run dev\"",
     "build": "npm --workspace=apps/api run build && npm --workspace=apps/web run build",
     "start": "npm --workspace=apps/api run start",
     "test": "npm --workspace=apps/api run test && npm --workspace=apps/web run test",
     "lint": "npm --workspace=apps/api run lint && npm --workspace=apps/web run lint",
     "fmt": "prettier --write \"apps/**/*.{ts,tsx,js,jsx,css}\" \"scripts/**/*.ts\"",
-    "seed": "ts-node -r dotenv/config scripts/seed.ts"
-    }
+    "seed": "ts-node --compiler-options '{\"module\":\"commonjs\"}' -r dotenv/config scripts/seed.ts",
+    "add-tags": "ts-node --compiler-options '{\"module\":\"commonjs\"}' -r dotenv/config scripts/addDefaultTags.ts"
+  }
 }

@@ -106,6 +106,25 @@ export default function TasksPage() {
                           {task.description}
                         </p>
                       )}
+                      {task.tags && task.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {task.tags.map((tag: any) => {
+                            const tagObj = typeof tag === 'object' ? tag : { name: tag, color: '#3B82F6' };
+                            return (
+                              <span
+                                key={tagObj._id || tagObj.id || tagObj.name}
+                                className="px-2 py-0.5 text-xs rounded-full font-medium"
+                                style={{
+                                  backgroundColor: tagObj.color || '#3B82F6',
+                                  color: 'white',
+                                }}
+                              >
+                                {tagObj.name}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center justify-between">

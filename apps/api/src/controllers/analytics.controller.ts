@@ -147,6 +147,55 @@ export const getAnalytics = async (req: AuthRequest, res: Response, next: NextFu
     }
     burnDown.reverse();
 
+    // Tag-based analytics
+    const allTags = await Tag.find({ userId });
+    const tagStats = await Promise.all(
+      allTags.map(async (tag) => {
+        const tasksWithTag = await Task.find({
+          userId,
+          tags: tag._id,
+          createdAt: { $gte: fromDate, $lte: toDate },
+        });
+
+        const completedWithTag = await Task.countDocuments({
+          userId,
+          tags: tag._id,
+          status: 'done',
+          updatedAt: { $gte: fromDate, $lte: toDate },
+        });
+
+        const inProgress = await Task.countDocuments({
+          userId,
+          tags: tag._id,
+          status: 'in_progress',
+          createdAt: { $gte: fromDate, $lte: toDate },
+        });
+
+        const todo = await Task.countDocuments({
+          userId,
+          tags: tag._id,
+          status: 'todo',
+          createdAt: { $gte: fromDate, $lte: toDate },
+        });
+
+        const totalTime = tasksWithTag.reduce((sum, task) => sum + (task.actualMinutes || 0), 0);
+        const estimatedTime = tasksWithTag.reduce((sum, task) => sum + (task.estimateMinutes || 0), 0);
+
+        return {
+          tagId: tag._id.toString(),
+          tagName: tag.name,
+          tagColor: tag.color,
+          totalTasks: tasksWithTag.length,
+          completed: completedWithTag,
+          inProgress,
+          todo,
+          completionRate: tasksWithTag.length > 0 ? (completedWithTag / tasksWithTag.length) * 100 : 0,
+          totalTimeMinutes: totalTime,
+          estimatedTimeMinutes: estimatedTime,
+        };
+      })
+    );
+
     res.json({
       kpis: {
         tasksCompletedToday,
@@ -162,6 +211,7 @@ export const getAnalytics = async (req: AuthRequest, res: Response, next: NextFu
         timeByTag: timeByTagDetails,
         burnDown,
       },
+      tagStats, // New: detailed tag breakdown
     });
   } catch (error) {
     next(error);

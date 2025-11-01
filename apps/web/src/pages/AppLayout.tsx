@@ -2,7 +2,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
 import { useUIStore } from '../store/ui.store';
 import { Button } from '../components/ui/button';
-import { Menu, Bell, LogOut, Calendar, LayoutDashboard, List, Focus, Settings } from 'lucide-react';
+import { Menu, Bell, LogOut, Calendar, LayoutDashboard, List, Focus, Settings, Tag as TagIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 
@@ -34,6 +34,7 @@ export default function AppLayout() {
     { id: 'calendar', label: 'Calendar', icon: Calendar, path: '/app/calendar' },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/app/dashboard' },
     { id: 'focus', label: 'Focus Mode', icon: Focus, path: '/app/focus' },
+    { id: 'tags', label: 'Tags', icon: TagIcon, path: '/app/tags' },
   ];
 
   const handleNavClick = (item: typeof navItems[0]) => {

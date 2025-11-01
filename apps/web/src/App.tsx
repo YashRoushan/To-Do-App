@@ -8,6 +8,7 @@ import TasksPage from './pages/TasksPage';
 import CalendarPage from './pages/CalendarPage';
 import DashboardPage from './pages/DashboardPage';
 import FocusPage from './pages/FocusPage';
+import TagsPage from './pages/TagsPage';
 import { Toaster } from './components/ui/toaster';
 
 const queryClient = new QueryClient({
@@ -39,6 +40,7 @@ function App() {
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="focus" element={<FocusPage />} />
+          <Route path="tags" element={<TagsPage />} />
         </Route>
         <Route path="/" element={<Navigate to="/app" replace />} />
       </Routes>

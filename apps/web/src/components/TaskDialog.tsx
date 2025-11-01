@@ -38,12 +38,25 @@ export default function TaskDialog({ open, onOpenChange, task }: TaskDialogProps
   const [allDay, setAllDay] = useState(false);
 
   // Fetch tags
-  const { data: tagsData } = useQuery({
+  const { data: tagsData, isLoading: tagsLoading, error: tagsError } = useQuery({
     queryKey: ['tags'],
     queryFn: () => api.getTags(),
+    retry: 2,
   });
 
   const tags = tagsData?.tags || [];
+
+  // Debug tags
+  useEffect(() => {
+    if (tagsError) {
+      console.error('Error fetching tags:', tagsError);
+    }
+    if (tags.length > 0) {
+      console.log('Loaded tags:', tags);
+    } else if (!tagsLoading) {
+      console.warn('No tags found. Make sure you run the seed script or create tags.');
+    }
+  }, [tags, tagsError, tagsLoading]);
 
   // Load task data when editing
   useEffect(() => {
@@ -248,31 +261,42 @@ export default function TaskDialog({ open, onOpenChange, task }: TaskDialogProps
             </Label>
           </div>
 
-          {tags.length > 0 && (
-            <div className="space-y-2">
-              <Label>Tags</Label>
+          <div className="space-y-2">
+            <Label>Tags</Label>
+            {tagsLoading ? (
+              <p className="text-sm text-muted-foreground">Loading tags...</p>
+            ) : tagsError ? (
+              <p className="text-sm text-red-600">Error loading tags. Check console.</p>
+            ) : tags.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {tags.map((tag: any) => {
-                  const isSelected = selectedTags.includes(tag._id);
+                  const tagId = tag._id || tag.id || String(tag);
+                  const isSelected = selectedTags.includes(tagId);
                   return (
                     <button
-                      key={tag._id}
+                      key={tagId}
                       type="button"
-                      onClick={() => toggleTag(tag._id)}
-                      className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      onClick={() => toggleTag(tagId)}
+                      className={`px-3 py-1 rounded-full text-sm font-medium transition-colors border-2 ${
                         isSelected
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                          ? 'text-white border-transparent'
+                          : 'bg-secondary text-secondary-foreground hover:bg-secondary/80 border-gray-300'
                       }`}
-                      style={isSelected ? { backgroundColor: tag.color } : {}}
+                      style={isSelected ? { backgroundColor: tag.color || '#3B82F6' } : {}}
                     >
                       {tag.name}
                     </button>
                   );
                 })}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="p-4 border rounded-md bg-muted">
+                <p className="text-sm text-muted-foreground">
+                  No tags found. Run <code className="text-xs bg-background px-1 py-0.5 rounded">npm run seed</code> to create default tags, or create tags manually.
+                </p>
+              </div>
+            )}
+          </div>
 
           <div className="flex justify-end gap-2 pt-4">
             <Button
