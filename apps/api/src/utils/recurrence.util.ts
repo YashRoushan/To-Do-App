@@ -10,6 +10,7 @@ export interface ExpandedEvent {
   status: string;
   priority: number;
   tags: string[];
+  tagColors?: string[]; // Colors for each tag
 }
 
 export function expandRecurrence(
@@ -38,7 +39,8 @@ export function expandRecurrence(
             title: task.title,
             status: task.status,
             priority: task.priority,
-            tags: task.tags.map((t) => t.toString()),
+            tags: task.tags.map((t: any) => (typeof t === 'object' ? t._id.toString() : t.toString())),
+            tagColors: task.tags.map((t: any) => (typeof t === 'object' && t.color ? t.color : null)).filter(Boolean),
           },
         ];
       }
@@ -56,7 +58,8 @@ export function expandRecurrence(
             title: task.title,
             status: task.status,
             priority: task.priority,
-            tags: task.tags.map((t) => t.toString()),
+            tags: task.tags.map((t: any) => (typeof t === 'object' ? t._id.toString() : t.toString())),
+            tagColors: task.tags.map((t: any) => (typeof t === 'object' && t.color ? t.color : null)).filter(Boolean),
           },
         ];
       }
@@ -74,7 +77,8 @@ export function expandRecurrence(
             title: task.title,
             status: task.status,
             priority: task.priority,
-            tags: task.tags.map((t) => t.toString()),
+            tags: task.tags.map((t: any) => (typeof t === 'object' ? t._id.toString() : t.toString())),
+            tagColors: task.tags.map((t: any) => (typeof t === 'object' && t.color ? t.color : null)).filter(Boolean),
           },
         ];
       }
@@ -147,7 +151,8 @@ export function expandRecurrence(
         title: task.title,
         status: task.status,
         priority: task.priority,
-        tags: task.tags.map((t) => t.toString()),
+        tags: task.tags.map((t: any) => (typeof t === 'object' ? t._id.toString() : t.toString())),
+        tagColors: task.tags.map((t: any) => (typeof t === 'object' && t.color ? t.color : null)).filter(Boolean),
       });
     }
 
