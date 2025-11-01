@@ -106,13 +106,14 @@ export class ApiClient {
     const query = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
+        if (value !== undefined && value !== null && value !== '') {
           query.append(key, String(value));
         }
       });
     }
+    const queryString = query.toString();
     return this.request<{ tasks: any[]; nextCursor: string | null }>(
-      `/tasks?${query.toString()}`
+      `/tasks${queryString ? `?${queryString}` : ''}`
     );
   }
 

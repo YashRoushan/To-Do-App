@@ -76,6 +76,10 @@ export default function TaskDialog({ open, onOpenChange, task }: TaskDialogProps
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       onOpenChange(false);
     },
+    onError: (error: any) => {
+      console.error('Error creating task:', error);
+      alert(error?.error?.message || 'Failed to create task');
+    },
   });
 
   const updateMutation = useMutation({
@@ -85,14 +89,23 @@ export default function TaskDialog({ open, onOpenChange, task }: TaskDialogProps
       queryClient.invalidateQueries({ queryKey: ['task', task._id] });
       onOpenChange(false);
     },
+    onError: (error: any) => {
+      console.error('Error updating task:', error);
+      alert(error?.error?.message || 'Failed to update task');
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!title.trim()) {
+      alert('Please enter a task title');
+      return;
+    }
 
     const taskData: any = {
-      title,
-      description,
+      title: title.trim(),
+      description: description.trim() || undefined,
       status,
       priority: Number(priority),
       tags: selectedTags,
@@ -106,6 +119,8 @@ export default function TaskDialog({ open, onOpenChange, task }: TaskDialogProps
         taskData.startAt = date.toISOString();
       }
     }
+
+    console.log('Submitting task:', taskData);
 
     if (isEditing) {
       updateMutation.mutate(taskData);
@@ -158,8 +173,8 @@ export default function TaskDialog({ open, onOpenChange, task }: TaskDialogProps
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
               <Select value={status} onValueChange={(value: any) => setStatus(value)}>
-                <SelectTrigger>
-                  <SelectValue />
+                <SelectTrigger id="status">
+                  <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todo">To Do</SelectItem>
@@ -175,8 +190,8 @@ export default function TaskDialog({ open, onOpenChange, task }: TaskDialogProps
                 value={String(priority)}
                 onValueChange={(value) => setPriority(Number(value))}
               >
-                <SelectTrigger>
-                  <SelectValue />
+                <SelectTrigger id="priority">
+                  <SelectValue placeholder="Select priority" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="1">1 - Low</SelectItem>

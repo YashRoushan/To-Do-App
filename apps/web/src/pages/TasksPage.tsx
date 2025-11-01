@@ -30,6 +30,7 @@ export default function TasksPage() {
   };
 
   const handleNewTask = () => {
+    console.log('Opening new task dialog');
     setEditingTask(null);
     setIsDialogOpen(true);
   };
@@ -45,7 +46,13 @@ export default function TasksPage() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Tasks</h1>
-        <Button onClick={handleNewTask}>
+        <Button 
+          onClick={(e) => {
+            e.preventDefault();
+            console.log('Button clicked!');
+            handleNewTask();
+          }}
+        >
           <Plus className="h-4 w-4 mr-2" />
           New Task
         </Button>

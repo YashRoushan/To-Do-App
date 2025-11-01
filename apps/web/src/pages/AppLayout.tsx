@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
 import { useUIStore } from '../store/ui.store';
 import { Button } from '../components/ui/button';
@@ -8,6 +8,7 @@ import { api } from '../lib/api';
 
 export default function AppLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = useAuthStore((state) => state.user);
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const sidebarOpen = useUIStore((state) => state.sidebarOpen);
@@ -29,11 +30,16 @@ export default function AppLayout() {
   };
 
   const navItems = [
-    { id: 'kanban', label: 'Tasks', icon: List },
-    { id: 'calendar', label: 'Calendar', icon: Calendar },
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'focus', label: 'Focus Mode', icon: Focus },
+    { id: 'tasks', label: 'Tasks', icon: List, path: '/app/tasks' },
+    { id: 'calendar', label: 'Calendar', icon: Calendar, path: '/app/calendar' },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/app/dashboard' },
+    { id: 'focus', label: 'Focus Mode', icon: Focus, path: '/app/focus' },
   ];
+
+  const handleNavClick = (item: typeof navItems[0]) => {
+    setViewMode(item.id as any);
+    navigate(item.path);
+  };
 
   return (
     <div className="flex h-screen bg-background">
@@ -50,12 +56,13 @@ export default function AppLayout() {
         <nav className="flex-1 p-2 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
+            const isActive = location.pathname === item.path;
             return (
               <button
                 key={item.id}
-                onClick={() => setViewMode(item.id as any)}
+                onClick={() => handleNavClick(item)}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  viewMode === item.id
+                  isActive
                     ? 'bg-primary text-primary-foreground'
                     : 'hover:bg-accent'
                 }`}

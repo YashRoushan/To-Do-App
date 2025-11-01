@@ -8,7 +8,8 @@ const router = Router();
 
 router.use(authenticate);
 
-router.get('/', validateQuery(taskQuerySchema), taskController.getTasks);
+// Remove strict validation for GET /tasks to allow flexible query params
+router.get('/', taskController.getTasks);
 router.post('/', validate(createTaskSchema), taskController.createTask);
 router.get('/:id', taskController.getTask);
 router.patch('/:id', validate(updateTaskSchema), taskController.updateTask);

@@ -33,14 +33,28 @@ export const updateTaskSchema = createTaskSchema.partial();
 
 export const taskQuerySchema = z.object({
   status: z.enum(['todo', 'in_progress', 'done']).optional(),
-  from: z.string().datetime().optional(),
-  to: z.string().datetime().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
   q: z.string().optional(),
   tags: z.string().optional(), // comma-separated tag IDs
-  priority: z.string().regex(/^\d+$/).transform(Number).optional(),
-  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  priority: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null || val === '') return undefined;
+      const num = typeof val === 'string' ? Number(val) : val;
+      return isNaN(num) ? undefined : num;
+    },
+    z.number().int().positive().optional()
+  ),
+  limit: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null || val === '') return undefined;
+      const num = typeof val === 'string' ? Number(val) : val;
+      return isNaN(num) ? undefined : num;
+    },
+    z.number().int().positive().optional()
+  ),
   cursor: z.string().optional(),
-});
+}).passthrough(); // Allow extra query params
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
