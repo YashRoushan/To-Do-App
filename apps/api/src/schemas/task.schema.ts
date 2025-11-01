@@ -16,14 +16,41 @@ const checklistItemSchema = z.object({
 
 export const createTaskSchema = z.object({
   title: z.string().min(1, 'Title is required').trim(),
-  description: z.string().optional(),
+  description: z.preprocess(
+    (val) => (val === '' || val === null ? undefined : val),
+    z.string().optional()
+  ),
   status: z.enum(['todo', 'in_progress', 'done']).default('todo'),
-  priority: z.number().int().min(1).max(5).default(3),
-  tags: z.array(z.string()).default([]),
-  dueAt: z.date().nullable().optional(),
-  startAt: z.date().nullable().optional(),
-  allDay: z.boolean().default(false),
-  estimateMinutes: z.number().int().positive().nullable().optional(),
+  priority: z.preprocess(
+    (val) => (val === undefined || val === null ? 3 : Number(val)),
+    z.number().int().min(1).max(5).default(3)
+  ),
+  tags: z.preprocess(
+    (val) => (Array.isArray(val) ? val : []),
+    z.array(z.string()).default([])
+  ),
+  dueAt: z.preprocess(
+    (val) => {
+      if (!val || val === '' || val === null) return null;
+      return new Date(val as string);
+    },
+    z.date().nullable().optional()
+  ),
+  startAt: z.preprocess(
+    (val) => {
+      if (!val || val === '' || val === null) return null;
+      return new Date(val as string);
+    },
+    z.date().nullable().optional()
+  ),
+  allDay: z.preprocess(
+    (val) => (val === undefined || val === null ? false : Boolean(val)),
+    z.boolean().default(false)
+  ),
+  estimateMinutes: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? null : Number(val)),
+    z.number().int().positive().nullable().optional()
+  ),
   actualMinutes: z.number().int().min(0).default(0),
   recurrence: recurrenceSchema.nullable().optional(),
   checklist: z.array(checklistItemSchema).default([]),

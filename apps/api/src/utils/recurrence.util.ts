@@ -18,19 +18,59 @@ export function expandRecurrence(
   toDate: Date
 ): ExpandedEvent[] {
   if (!task.recurrence || task.recurrence.rule === 'NONE') {
-    if (task.startAt && task.dueAt) {
-      // Single event
+    // Handle non-recurring tasks
+    const startAt = task.startAt;
+    const dueAt = task.dueAt;
+    
+    // If task has both dates
+    if (startAt && dueAt) {
       if (
-        (task.startAt >= fromDate && task.startAt <= toDate) ||
-        (task.dueAt >= fromDate && task.dueAt <= toDate) ||
-        (task.startAt <= fromDate && task.dueAt >= toDate)
+        (startAt >= fromDate && startAt <= toDate) ||
+        (dueAt >= fromDate && dueAt <= toDate) ||
+        (startAt <= fromDate && dueAt >= toDate)
       ) {
         return [
           {
             taskId: task._id.toString(),
-            startAt: task.startAt,
-            dueAt: task.dueAt,
+            startAt: startAt,
+            dueAt: dueAt,
             allDay: task.allDay,
+            title: task.title,
+            status: task.status,
+            priority: task.priority,
+            tags: task.tags.map((t) => t.toString()),
+          },
+        ];
+      }
+    }
+    // If task only has dueAt
+    else if (dueAt) {
+      if (dueAt >= fromDate && dueAt <= toDate) {
+        // Use dueAt as both start and end for single-day events
+        return [
+          {
+            taskId: task._id.toString(),
+            startAt: dueAt,
+            dueAt: dueAt,
+            allDay: task.allDay || true, // Default to all-day if only due date
+            title: task.title,
+            status: task.status,
+            priority: task.priority,
+            tags: task.tags.map((t) => t.toString()),
+          },
+        ];
+      }
+    }
+    // If task only has startAt
+    else if (startAt) {
+      if (startAt >= fromDate && startAt <= toDate) {
+        // Use startAt as both start and end for single-day events
+        return [
+          {
+            taskId: task._id.toString(),
+            startAt: startAt,
+            dueAt: startAt,
+            allDay: task.allDay || true,
             title: task.title,
             status: task.status,
             priority: task.priority,

@@ -4,9 +4,13 @@ import { ZodSchema } from 'zod';
 export const validate = (schema: ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
-      schema.parse(req.body);
+      const parsed = schema.parse(req.body);
+      // Replace req.body with parsed/validated data
+      req.body = parsed;
       next();
     } catch (error) {
+      console.error('Validation error:', error);
+      console.error('Request body:', JSON.stringify(req.body, null, 2));
       next(error);
     }
   };

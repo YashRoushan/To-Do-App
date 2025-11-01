@@ -74,11 +74,19 @@ export default function TaskDialog({ open, onOpenChange, task }: TaskDialogProps
     mutationFn: (data: any) => api.createTask(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar'] }); // Refresh calendar
       onOpenChange(false);
     },
     onError: (error: any) => {
       console.error('Error creating task:', error);
-      alert(error?.error?.message || 'Failed to create task');
+      const errorMessage = error?.error?.message || 'Failed to create task';
+      const details = error?.error?.details;
+      if (details && Array.isArray(details)) {
+        const detailMessages = details.map((d: any) => `${d.path}: ${d.message}`).join('\n');
+        alert(`${errorMessage}\n\nDetails:\n${detailMessages}`);
+      } else {
+        alert(errorMessage);
+      }
     },
   });
 
@@ -87,11 +95,19 @@ export default function TaskDialog({ open, onOpenChange, task }: TaskDialogProps
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['task', task._id] });
+      queryClient.invalidateQueries({ queryKey: ['calendar'] }); // Refresh calendar
       onOpenChange(false);
     },
     onError: (error: any) => {
       console.error('Error updating task:', error);
-      alert(error?.error?.message || 'Failed to update task');
+      const errorMessage = error?.error?.message || 'Failed to update task';
+      const details = error?.error?.details;
+      if (details && Array.isArray(details)) {
+        const detailMessages = details.map((d: any) => `${d.path}: ${d.message}`).join('\n');
+        alert(`${errorMessage}\n\nDetails:\n${detailMessages}`);
+      } else {
+        alert(errorMessage);
+      }
     },
   });
 
@@ -105,18 +121,23 @@ export default function TaskDialog({ open, onOpenChange, task }: TaskDialogProps
 
     const taskData: any = {
       title: title.trim(),
-      description: description.trim() || undefined,
       status,
       priority: Number(priority),
-      tags: selectedTags,
-      allDay,
+      tags: selectedTags || [],
+      allDay: Boolean(allDay),
     };
 
+    // Only include description if it's not empty
+    if (description.trim()) {
+      taskData.description = description.trim();
+    }
+
+    // Handle dates - convert to ISO string format
     if (dueAt) {
-      const date = new Date(dueAt);
-      taskData.dueAt = date.toISOString();
+      taskData.dueAt = new Date(dueAt).toISOString();
+      // If not all-day, set startAt to the same time
       if (!allDay) {
-        taskData.startAt = date.toISOString();
+        taskData.startAt = new Date(dueAt).toISOString();
       }
     }
 

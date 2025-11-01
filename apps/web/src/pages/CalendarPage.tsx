@@ -1,33 +1,45 @@
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import { formatISO } from 'date-fns';
+import { formatISO, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 
 export default function CalendarPage() {
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const queryClient = useQueryClient();
+  const [currentDate, setCurrentDate] = useState(new Date());
+  
+  // Expand date range to show more tasks (3 months before and after current view)
+  const viewStart = subMonths(startOfMonth(currentDate), 3);
+  const viewEnd = addMonths(endOfMonth(currentDate), 3);
 
-  const { data } = useQuery({
-    queryKey: ['calendar', formatISO(startOfMonth), formatISO(endOfMonth)],
+  const { data, refetch } = useQuery({
+    queryKey: ['calendar', formatISO(viewStart), formatISO(viewEnd)],
     queryFn: () =>
-      api.getCalendarEvents(formatISO(startOfMonth), formatISO(endOfMonth)),
+      api.getCalendarEvents(formatISO(viewStart), formatISO(viewEnd)),
+    refetchOnWindowFocus: true,
   });
 
+  // Automatically refetch when tasks query is invalidated
+  // This is handled by invalidating ['calendar'] queries when tasks change
+
   const events = useMemo(() => {
-    return (
-      data?.events.map((event: any) => ({
-        id: event.taskId,
-        title: event.title,
-        start: event.startAt,
-        end: event.dueAt,
-        allDay: event.allDay,
-      })) || []
-    );
+    if (!data?.events) return [];
+    
+    return data.events.map((event: any) => ({
+      id: event.taskId,
+      title: event.title,
+      start: event.startAt || event.dueAt, // Use dueAt as start if no startAt
+      end: event.dueAt || event.startAt, // Use startAt as end if no dueAt
+      allDay: event.allDay,
+      color: event.status === 'done' ? '#10B981' : event.status === 'in_progress' ? '#F59E0B' : '#3B82F6',
+      extendedProps: {
+        status: event.status,
+        priority: event.priority,
+      },
+    }));
   }, [data]);
 
   return (
@@ -45,6 +57,21 @@ export default function CalendarPage() {
           }}
           editable={true}
           droppable={true}
+          datesSet={(arg) => {
+            // Update current date when calendar view changes
+            setCurrentDate(arg.start);
+          }}
+          eventContent={(eventInfo) => {
+            // Custom event rendering with status indicator
+            return (
+              <div className="fc-event-main-frame">
+                <div className="fc-event-time">{eventInfo.timeText}</div>
+                <div className="fc-event-title-container">
+                  <div className="fc-event-title">{eventInfo.event.title}</div>
+                </div>
+              </div>
+            );
+          }}
         />
       </div>
     </div>

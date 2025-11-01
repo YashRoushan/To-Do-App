@@ -20,25 +20,47 @@ export const getCalendarEvents = async (req: AuthRequest, res: Response, next: N
     const fromDate = parseISO(from as string);
     const toDate = parseISO(to as string);
 
-    // Get all tasks for the user in the date range or with recurrence
+    // Get all tasks for the user that:
+    // 1. Have startAt or dueAt in the date range
+    // 2. Have recurrence (will be expanded)
+    // 3. Have startAt that overlaps with range (even if dueAt is outside)
+    // 4. Have dueAt in range (even if no startAt)
     const tasks = await Task.find({
       userId: req.userId,
       $or: [
+        // Tasks with startAt in range
+        {
+          startAt: {
+            $exists: true,
+            $ne: null,
+            $lte: toDate,
+            $gte: fromDate,
+          },
+        },
+        // Tasks with dueAt in range
+        {
+          dueAt: {
+            $exists: true,
+            $ne: null,
+            $lte: toDate,
+            $gte: fromDate,
+          },
+        },
+        // Tasks that span the date range (start before, end after)
         {
           $and: [
-            { startAt: { $exists: true, $ne: null } },
-            { startAt: { $lte: toDate } },
-            { $or: [{ dueAt: null }, { dueAt: { $gte: fromDate } }] },
+            { startAt: { $exists: true, $ne: null, $lte: fromDate } },
+            {
+              $or: [
+                { dueAt: { $exists: true, $ne: null, $gte: toDate } },
+                { dueAt: null },
+              ],
+            },
           ],
         },
+        // Tasks with recurrence (will be expanded)
         {
-          $and: [
-            { dueAt: { $exists: true, $ne: null } },
-            { dueAt: { $lte: toDate, $gte: fromDate } },
-          ],
-        },
-        {
-          'recurrence.rule': { $ne: 'NONE' },
+          'recurrence.rule': { $ne: 'NONE', $exists: true },
         },
       ],
     }).populate('tags');

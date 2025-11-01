@@ -21,6 +21,7 @@ export default function TasksPage() {
     mutationFn: (id: string) => api.deleteTask(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar'] }); // Refresh calendar
     },
   });
 
