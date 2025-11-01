@@ -68,17 +68,40 @@ export default function TaskDialog({ open, onOpenChange, task }: TaskDialogProps
       setSelectedTags(task.tags?.map((t: any) => (typeof t === 'string' ? t : t._id)) || []);
       if (task.dueAt) {
         const date = new Date(task.dueAt);
-        setDueAt(date.toISOString().slice(0, 16));
+        // Format as YYYY-MM-DDTHH:mm (datetime-local format, no seconds)
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        setDueAt(`${year}-${month}-${day}T${hours}:${minutes}`);
+      } else {
+        // Default to current time if editing and no dueAt
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        setDueAt(`${year}-${month}-${day}T${hours}:${minutes}`);
       }
       setAllDay(task.allDay || false);
     } else {
-      // Reset form for new task
+      // Reset form for new task - set default time to current time
       setTitle('');
       setDescription('');
       setStatus('todo');
       setPriority(3);
       setSelectedTags([]);
-      setDueAt('');
+      // Set default to current datetime (without seconds)
+      const now = new Date();
+      // Format as YYYY-MM-DDTHH:mm (datetime-local format)
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      setDueAt(`${year}-${month}-${day}T${hours}:${minutes}`);
       setAllDay(false);
     }
   }, [task, open]);
@@ -146,12 +169,17 @@ export default function TaskDialog({ open, onOpenChange, task }: TaskDialogProps
     }
 
     // Handle dates - convert to ISO string format
-    if (dueAt) {
-      taskData.dueAt = new Date(dueAt).toISOString();
-      // If not all-day, set startAt to the same time
-      if (!allDay) {
-        taskData.startAt = new Date(dueAt).toISOString();
-      }
+    // Use dueAt if set, otherwise default to current time
+    const dueDate = dueAt ? new Date(dueAt) : new Date();
+    
+    // Remove seconds and milliseconds
+    dueDate.setSeconds(0);
+    dueDate.setMilliseconds(0);
+    
+    taskData.dueAt = dueDate.toISOString();
+    // If not all-day, set startAt to the same time
+    if (!allDay) {
+      taskData.startAt = dueDate.toISOString();
     }
 
     console.log('Submitting task:', taskData);
