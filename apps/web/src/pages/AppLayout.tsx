@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Menu, Bell, LogOut, Calendar, LayoutDashboard, List, Focus, Settings, Tag as TagIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 export default function AppLayout() {
   const navigate = useNavigate();
@@ -98,6 +99,7 @@ export default function AppLayout() {
             <Menu className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <Button variant="ghost" size="icon" className="relative group">
               <Bell className="h-5 w-5" />
               {reminders && reminders.reminders.length > 0 && (

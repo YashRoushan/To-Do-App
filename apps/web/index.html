@@ -5,6 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>To-Do App - Personal Task Manager</title>
     <meta name="description" content="A powerful personal task manager for maximizing productivity and discipline" />
+    <script>
+      // Initialize theme before React loads to prevent flash
+      (function() {
+        const theme = localStorage.getItem('theme-preference') || 'system';
+        const root = document.documentElement;
+        root.classList.remove('light', 'dark');
+        
+        if (theme === 'system') {
+          const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          root.classList.add(systemTheme);
+        } else {
+          root.classList.add(theme);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
