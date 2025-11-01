@@ -6,21 +6,43 @@ import { Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 export default function DashboardPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['analytics'],
     queryFn: () => api.getAnalytics(),
+    retry: 1,
   });
 
   if (isLoading) {
     return <div className="p-8">Loading dashboard...</div>;
   }
 
+  if (error) {
+    const err = error as any;
+    return (
+      <div className="p-8">
+        <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950 dark:border-red-800 p-4">
+          <h2 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-2">
+            Error loading dashboard
+          </h2>
+          <p className="text-sm text-red-600 dark:text-red-400">
+            {err?.error?.message || 'Failed to load analytics data. Please try refreshing the page.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const kpis = data?.kpis || {};
   const charts = data?.charts || {};
   const tagStats = data?.tagStats || [];
 
-  const handleExportCSV = () => {
-    api.getAnalyticsCSV();
+  const handleExportCSV = async () => {
+    try {
+      await api.getAnalyticsCSV();
+    } catch (error: any) {
+      console.error('Failed to export CSV:', error);
+      alert('Failed to export CSV. Please try again.');
+    }
   };
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
@@ -79,6 +101,43 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      {/* Additional KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              On-Time Tasks
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{kpis.onTime || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">Completed before deadline</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Late Tasks
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{kpis.late || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">Completed after deadline</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Upcoming Tasks
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{kpis.upcomingTasks || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">Due this week</p>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
@@ -94,13 +153,13 @@ export default function DashboardPage() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={(entry) => `${entry.tagName}: ${Math.round(entry.minutes / 60)}h`}
+                    label={(entry: any) => `${entry.tagName}: ${Math.round(entry.minutes / 60)}h`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="minutes"
                   >
-                    {charts.timeByTag.map((_entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    {charts.timeByTag.map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={entry.tagColor || COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -172,12 +231,14 @@ export default function DashboardPage() {
                   <div className="pt-2 border-t">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Completion:</span>
-                      <span className="font-bold">{tag.completionRate.toFixed(1)}%</span>
+                      <span className="font-bold">
+                        {tag.completionRate != null ? tag.completionRate.toFixed(1) : 0}%
+                      </span>
                     </div>
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Time: {Math.round(tag.totalTimeMinutes / 60)}h</span>
-                    <span>Est: {Math.round(tag.estimatedTimeMinutes / 60)}h</span>
+                    <span>Time: {Math.round((tag.totalTimeMinutes || 0) / 60)}h</span>
+                    <span>Est: {Math.round((tag.estimatedTimeMinutes || 0) / 60)}h</span>
                   </div>
                 </CardContent>
               </Card>

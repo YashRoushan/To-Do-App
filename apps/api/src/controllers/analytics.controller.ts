@@ -1,4 +1,5 @@
 import { Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
 import { Task } from '../models/Task';
 import { Activity } from '../models/Activity';
 import { Tag } from '../models/Tag';
@@ -82,12 +83,23 @@ export const getAnalytics = async (req: AuthRequest, res: Response, next: NextFu
     for (const task of allTasks) {
       const time = task.actualMinutes || 0;
       for (const tag of task.tags) {
-        const tagId = tag.toString();
+        // Handle both populated tags (objects) and ObjectIds
+        const tagId = tag && typeof tag === 'object' && '_id' in tag 
+          ? tag._id.toString() 
+          : (tag as any).toString();
         timeByTag[tagId] = (timeByTag[tagId] || 0) + time;
       }
     }
 
-    const tagNames = await Tag.find({ userId, _id: { $in: Object.keys(timeByTag) } });
+    // Convert string keys to ObjectIds for the query
+    const tagIds = Object.keys(timeByTag)
+      .filter(id => mongoose.Types.ObjectId.isValid(id))
+      .map(id => new mongoose.Types.ObjectId(id));
+
+    const tagNames = tagIds.length > 0 
+      ? await Tag.find({ userId, _id: { $in: tagIds } })
+      : [];
+      
     const timeByTagDetails = tagNames.map((tag) => ({
       tagId: tag._id.toString(),
       tagName: tag.name,
@@ -124,15 +136,9 @@ export const getAnalytics = async (req: AuthRequest, res: Response, next: NextFu
       dueAt: { $gte: new Date(), $lte: weekEnd },
     });
 
-    // Burn-down for current week
-    const weekStart = startOfDay(subDays(new Date(), new Date().getDay()));
-    const weekTasks = await Task.find({
-      userId,
-      createdAt: { $gte: weekStart },
-    });
-
+    // Burn-down for current week (last 7 days)
     const burnDown = [];
-    for (let i = 0; i < 7; i++) {
+    for (let i = 6; i >= 0; i--) {
       const day = startOfDay(subDays(new Date(), i));
       const dayEnd = endOfDay(day);
       const completed = await Task.countDocuments({
@@ -141,11 +147,10 @@ export const getAnalytics = async (req: AuthRequest, res: Response, next: NextFu
         updatedAt: { $gte: day, $lte: dayEnd },
       });
       burnDown.push({
-        date: format(day, 'yyyy-MM-dd'),
+        date: format(day, 'MM/dd'),
         completed,
       });
     }
-    burnDown.reverse();
 
     // Tag-based analytics
     const allTags = await Tag.find({ userId });

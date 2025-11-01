@@ -10,12 +10,37 @@ export interface ApiError {
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const error: ApiError = await response.json().catch(() => ({
-      error: { code: 'UNKNOWN', message: 'An error occurred' },
-    }));
+    let error: ApiError;
+    try {
+      const errorData = await response.json();
+      error = errorData;
+    } catch {
+      // If response is not JSON, create a structured error
+      error = {
+        error: {
+          code: `HTTP_${response.status}`,
+          message: response.statusText || 'An error occurred',
+        },
+      };
+    }
+    
+    // Log error for debugging
+    console.error(`API Error [${response.status}]:`, error);
+    
     throw error;
   }
-  return response.json();
+  
+  try {
+    return await response.json();
+  } catch (e) {
+    console.error('Failed to parse response JSON:', e);
+    throw {
+      error: {
+        code: 'PARSE_ERROR',
+        message: 'Failed to parse server response',
+      },
+    };
+  }
 }
 
 export class ApiClient {
@@ -153,7 +178,8 @@ export class ApiClient {
     const query = new URLSearchParams();
     if (from) query.append('from', from);
     if (to) query.append('to', to);
-    return this.request<any>(`/analytics/summary?${query.toString()}`);
+    const queryString = query.toString();
+    return this.request<any>(`/analytics/summary${queryString ? `?${queryString}` : ''}`);
   }
 
   async getAnalyticsCSV(from?: string, to?: string) {

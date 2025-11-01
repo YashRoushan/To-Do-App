@@ -40,23 +40,31 @@ export default function TaskDialog({ open, onOpenChange, task }: TaskDialogProps
   // Fetch tags
   const { data: tagsData, isLoading: tagsLoading, error: tagsError } = useQuery({
     queryKey: ['tags'],
-    queryFn: () => api.getTags(),
-    retry: 2,
+    queryFn: async () => {
+      try {
+        return await api.getTags();
+      } catch (error: any) {
+        console.error('Failed to fetch tags:', error);
+        // Return empty tags array on error instead of throwing
+        // This allows the UI to still work
+        return { tags: [] };
+      }
+    },
+    retry: 1,
+    retryDelay: 1000,
   });
 
   const tags = tagsData?.tags || [];
 
-  // Debug tags
+  // Debug tags (reduced logging)
   useEffect(() => {
     if (tagsError) {
-      console.error('Error fetching tags:', tagsError);
+      const error = tagsError as any;
+      const errorMsg = error?.error?.message || 'Unknown error';
+      const errorCode = error?.error?.code || 'UNKNOWN';
+      console.error(`Failed to load tags [${errorCode}]:`, errorMsg);
     }
-    if (tags.length > 0) {
-      console.log('Loaded tags:', tags);
-    } else if (!tagsLoading) {
-      console.warn('No tags found. Make sure you run the seed script or create tags.');
-    }
-  }, [tags, tagsError, tagsLoading]);
+  }, [tagsError]);
 
   // Load task data when editing
   useEffect(() => {
@@ -294,7 +302,20 @@ export default function TaskDialog({ open, onOpenChange, task }: TaskDialogProps
             {tagsLoading ? (
               <p className="text-sm text-muted-foreground">Loading tags...</p>
             ) : tagsError ? (
-              <p className="text-sm text-red-600">Error loading tags. Check console.</p>
+              <div className="p-3 border border-red-200 rounded-md bg-red-50 dark:bg-red-950 dark:border-red-800">
+                <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                  Error loading tags
+                </p>
+                <p className="text-xs text-red-500 dark:text-red-500 mt-1">
+                  {(() => {
+                    const error = tagsError as any;
+                    if (error?.error?.code === 'UNAUTHORIZED') {
+                      return 'Please log out and log back in.';
+                    }
+                    return error?.error?.message || 'Check console for details';
+                  })()}
+                </p>
+              </div>
             ) : tags.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {tags.map((tag: any) => {
@@ -319,8 +340,17 @@ export default function TaskDialog({ open, onOpenChange, task }: TaskDialogProps
               </div>
             ) : (
               <div className="p-4 border rounded-md bg-muted">
-                <p className="text-sm text-muted-foreground">
-                  No tags found. Run <code className="text-xs bg-background px-1 py-0.5 rounded">npm run seed</code> to create default tags, or create tags manually.
+                <p className="text-sm text-muted-foreground mb-2">
+                  No tags found.
+                </p>
+                {tagsError && (
+                  <p className="text-xs text-red-600 mb-2">
+                    Error: {((tagsError as any)?.error?.message) || 'Failed to load tags'}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Go to <strong>Tags</strong> page to create tags, or run{' '}
+                  <code className="text-xs bg-background px-1 py-0.5 rounded">npm run add-tags</code>
                 </p>
               </div>
             )}
