@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Plus, Edit } from 'lucide-react';
 import { useState } from 'react';
 import TaskDialog from '../components/TaskDialog';
+import { isSameDay } from 'date-fns';
 import {
   DndContext,
   DragOverlay,
@@ -27,6 +28,7 @@ import { CSS } from '@dnd-kit/utilities';
 export default function TasksPage() {
   const queryClient = useQueryClient();
   const [filterStatus, setFilterStatus] = useState<string | undefined>();
+  const [filterToday, setFilterToday] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
 
@@ -117,12 +119,16 @@ export default function TasksPage() {
   }
 
   const allTasks = data?.tasks || [];
-  // Apply filter if active
-  const tasks = filterStatus
-    ? allTasks.filter((t) => t.status === filterStatus)
-    : allTasks;
   const statuses = ['todo', 'in_progress', 'done'];
   const activeTask = activeId ? allTasks.find((t) => t._id === activeId) : null;
+  
+  // Helper function to check if a task is due today
+  const isTaskDueToday = (task: any) => {
+    if (!task.dueAt) return false;
+    const today = new Date();
+    const dueDate = new Date(task.dueAt);
+    return isSameDay(dueDate, today);
+  };
 
   // Draggable Task Card Component
   const DraggableTaskCard = ({ task }: { task: any }) => {
@@ -219,14 +225,17 @@ export default function TasksPage() {
   };
 
   // Droppable Column Component
-  const DroppableColumn = ({ status, tasks: columnTasks }: { status: string; tasks: any[] }) => {
+  const DroppableColumn = ({ status, tasks: columnTasks, isFiltered = false }: { status: string; tasks: any[]; isFiltered?: boolean }) => {
     const { setNodeRef, isOver } = useDroppable({
       id: status,
     });
 
     return (
-      <div ref={setNodeRef} className="space-y-2">
-        <h2 className="font-semibold text-sm uppercase text-muted-foreground">
+      <div 
+        ref={setNodeRef} 
+        className={`space-y-2 transition-opacity ${isFiltered ? 'opacity-40' : 'opacity-100'}`}
+      >
+        <h2 className={`font-semibold text-sm uppercase ${isFiltered ? 'text-muted-foreground' : 'text-foreground'}`}>
           {status.replace('_', ' ')} ({columnTasks.length})
         </h2>
         <SortableContext
@@ -280,19 +289,34 @@ export default function TasksPage() {
         task={editingTask}
       />
 
-      {/* Status Filters */}
-      <div className="flex gap-2 mb-6">
+      {/* Status Filters - Highlights the selected status column */}
+      <div className="flex gap-2 mb-6 flex-wrap">
         <Button
-          variant={filterStatus === undefined ? 'default' : 'outline'}
-          onClick={() => setFilterStatus(undefined)}
+          variant={filterStatus === undefined && !filterToday ? 'default' : 'outline'}
+          onClick={() => {
+            setFilterStatus(undefined);
+            setFilterToday(false);
+          }}
         >
           All
+        </Button>
+        <Button
+          variant={filterToday ? 'default' : 'outline'}
+          onClick={() => {
+            setFilterToday(!filterToday);
+            // Keep status filter if active
+          }}
+        >
+          Today
         </Button>
         {statuses.map((status) => (
           <Button
             key={status}
             variant={filterStatus === status ? 'default' : 'outline'}
-            onClick={() => setFilterStatus(status)}
+            onClick={() => {
+              setFilterStatus(filterStatus === status ? undefined : status);
+              // Keep today filter if active
+            }}
           >
             {status.replace('_', ' ').toUpperCase()}
           </Button>
@@ -308,10 +332,24 @@ export default function TasksPage() {
       >
         <div className="grid grid-cols-3 gap-4">
           {statuses.map((status) => {
-            // Always use allTasks for columns to enable drag-and-drop
-            const statusTasks = allTasks.filter((t) => t.status === status);
+            // Apply filters to determine which tasks to show
+            let statusTasks = allTasks.filter((t) => t.status === status);
+            
+            // Apply "Today" filter if active
+            if (filterToday) {
+              statusTasks = statusTasks.filter(isTaskDueToday);
+            }
+            
+            // Determine if this column should be dimmed based on status filter
+            const isFiltered = filterStatus !== undefined && filterStatus !== status;
+            
             return (
-              <DroppableColumn key={status} status={status} tasks={statusTasks} />
+              <DroppableColumn 
+                key={status} 
+                status={status} 
+                tasks={statusTasks}
+                isFiltered={isFiltered}
+              />
             );
           })}
         </div>
