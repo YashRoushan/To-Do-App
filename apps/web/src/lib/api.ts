@@ -1,4 +1,19 @@
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000/api/v1';
+// Try to use 127.0.0.1 if available, fallback to localhost
+// Some systems have issues with localhost resolving to IPv6 first
+const getApiBase = () => {
+  const envBase = import.meta.env.VITE_API_BASE;
+  if (envBase) return envBase;
+  
+  // Try 127.0.0.1 first (IPv4) as it's more reliable than localhost (which may try IPv6)
+  return 'http://127.0.0.1:4000/api/v1';
+};
+
+const API_BASE = getApiBase();
+
+// Log API base URL on module load for debugging
+if (typeof window !== 'undefined') {
+  console.log('[API] Using API base:', API_BASE);
+}
 
 export interface ApiError {
   error: {
@@ -53,16 +68,39 @@ export class ApiClient {
   }
 
   async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const response = await fetch(`${API_BASE}${endpoint}`, {
-      ...options,
-      headers: {
-        ...this.getAuthHeaders(),
-        ...options?.headers,
-      },
-      credentials: 'include',
-    });
+    const url = `${API_BASE}${endpoint}`;
+    console.log(`[API] ${options?.method || 'GET'} ${url}`);
+    
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          ...this.getAuthHeaders(),
+          ...options?.headers,
+        },
+        credentials: 'include',
+      });
 
-    return handleResponse<T>(response);
+      return handleResponse<T>(response);
+    } catch (error: any) {
+      // Handle network errors (fetch failed, CORS, etc.)
+      console.error('[API] Request failed:', {
+        url,
+        error: error.message,
+        name: error.name,
+        stack: error.stack,
+      });
+      
+      if (error.name === 'TypeError' || error.message?.includes('fetch')) {
+        throw {
+          error: {
+            code: 'NETWORK_ERROR',
+            message: `Failed to connect to server at ${API_BASE}. Please check if the API server is running on port 4000.`,
+          },
+        };
+      }
+      throw error;
+    }
   }
 
   // Auth

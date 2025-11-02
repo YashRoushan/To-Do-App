@@ -9,6 +9,7 @@ const REFRESH_COOKIE_NAME = process.env.REFRESH_COOKIE_NAME || 'rt';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'superrefresh';
 
 export const signup = async (req: Request, res: Response, next: NextFunction) => {
+  let user: any = null;
   try {
     const { email, password, name } = req.body;
 
@@ -23,30 +24,38 @@ export const signup = async (req: Request, res: Response, next: NextFunction) =>
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = await User.create({
+    user = await User.create({
       email,
       passwordHash,
       name,
     });
 
     // Create default tags for new user
-    const defaultTags = [
-      { name: 'work', color: '#3B82F6' },
-      { name: 'health', color: '#10B981' },
-      { name: 'side hustle', color: '#F59E0B' },
-      { name: 'school', color: '#8B5CF6' },
-      { name: 'personal', color: '#EC4899' },
-      { name: 'fitness', color: '#EF4444' },
-      { name: 'project', color: '#06B6D4' },
-    ];
+    // Use try-catch to handle any errors gracefully (e.g., if tags already exist)
+    try {
+      const defaultTags = [
+        { name: 'work', color: '#3B82F6' },
+        { name: 'health', color: '#10B981' },
+        { name: 'side hustle', color: '#F59E0B' },
+        { name: 'school', color: '#8B5CF6' },
+        { name: 'personal', color: '#EC4899' },
+        { name: 'fitness', color: '#EF4444' },
+        { name: 'project', color: '#06B6D4' },
+      ];
 
-    await Tag.insertMany(
-      defaultTags.map((tag) => ({
-        userId: user._id,
-        name: tag.name,
-        color: tag.color,
-      }))
-    );
+      await Tag.insertMany(
+        defaultTags.map((tag) => ({
+          userId: user._id,
+          name: tag.name,
+          color: tag.color,
+        })),
+        { ordered: false } // Continue inserting even if some fail (e.g., duplicates)
+      );
+    } catch (tagError: any) {
+      // Log error but don't fail signup if tags already exist or other non-critical errors
+      console.warn('Failed to create default tags for user:', tagError.message);
+      // Continue with signup even if tag creation fails
+    }
 
     const accessToken = generateAccessToken(user._id.toString());
     const refreshToken = generateRefreshToken(user._id.toString());
@@ -67,7 +76,40 @@ export const signup = async (req: Request, res: Response, next: NextFunction) =>
       },
       accessToken,
     });
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Signup error:', error);
+    
+    // If user was created but something else failed, clean up
+    if (user && user._id) {
+      try {
+        await User.findByIdAndDelete(user._id);
+        // Also clean up any tags that might have been created
+        await Tag.deleteMany({ userId: user._id });
+      } catch (cleanupError) {
+        console.error('Failed to cleanup user after signup error:', cleanupError);
+      }
+    }
+    
+    // Provide more specific error messages
+    if (error?.name === 'ValidationError') {
+      return res.status(400).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: error.message || 'Validation failed',
+        },
+      });
+    }
+    
+    if (error?.code === 11000) {
+      // MongoDB duplicate key error
+      return res.status(400).json({
+        error: {
+          code: 'DUPLICATE_ENTRY',
+          message: 'Email already registered',
+        },
+      });
+    }
+    
     next(error);
   }
 };

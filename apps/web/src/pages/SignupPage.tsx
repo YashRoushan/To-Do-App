@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '../lib/api';
@@ -16,6 +16,14 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
+  // Test API connectivity on mount - use 127.0.0.1 to avoid IPv6 issues
+  useEffect(() => {
+    fetch('http://127.0.0.1:4000/api/v1/health')
+      .then(res => res.json())
+      .then(data => console.log('[SignupPage] ✅ API health check successful:', data))
+      .catch(err => console.error('[SignupPage] ❌ API health check failed:', err));
+  }, []);
+
   const mutation = useMutation({
     mutationFn: (data: { email: string; password: string; name: string }) => api.signup(data),
     onSuccess: (data) => {
@@ -23,7 +31,9 @@ export default function SignupPage() {
       navigate('/app');
     },
     onError: (err: any) => {
-      setError(err.error?.message || 'Signup failed');
+      console.error('Signup error:', err);
+      const errorMessage = err?.error?.message || err?.message || 'Signup failed. Please try again.';
+      setError(errorMessage);
     },
   });
 

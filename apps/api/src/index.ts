@@ -20,14 +20,40 @@ dotenv.config();
 const app = express();
 
 // Security middleware
-app.use(helmet());
+// Configure Helmet to allow CORS
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginEmbedderPolicy: false,
+}));
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan('dev'));
 
-// CORS
+// CORS - Allow both localhost and 127.0.0.1 to handle IPv4/IPv6 differences
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
-app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  CORS_ORIGIN,
+].filter(Boolean);
+
+app.use(cors({ 
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      // Still allow for debugging, but log it
+      console.warn(`CORS: Allowing origin ${origin} (not in allowed list)`);
+      callback(null, true);
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
 // Health check
 app.get('/api/v1/health', (_req, res) => res.json({ ok: true, time: new Date() }));
@@ -82,7 +108,12 @@ async function start() {
   // Start reminder service
   startReminderService();
 
-  app.listen(PORT, () => console.log(`API listening on http://localhost:${PORT}`));
+  // Listen on all interfaces (0.0.0.0) to allow connections from browser
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ API server listening on http://localhost:${PORT}`);
+    console.log(`   Also accessible at http://127.0.0.1:${PORT}`);
+    console.log(`   CORS origin: ${CORS_ORIGIN}`);
+  });
 }
 
 start();

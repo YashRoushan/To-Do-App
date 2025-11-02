@@ -83,11 +83,24 @@ export const getAnalytics = async (req: AuthRequest, res: Response, next: NextFu
     for (const task of allTasks) {
       const time = task.actualMinutes || 0;
       for (const tag of task.tags) {
-        // Handle both populated tags (objects) and ObjectIds
-        const tagId = tag && typeof tag === 'object' && '_id' in tag 
-          ? tag._id.toString() 
-          : (tag as any).toString();
-        timeByTag[tagId] = (timeByTag[tagId] || 0) + time;
+        // Extract tag ID - populated tags are objects with _id, unpopulated are ObjectIds
+        let tagId: string;
+        if (tag && typeof tag === 'object') {
+          // Populated tag (has _id property)
+          if ('_id' in tag && tag._id) {
+            tagId = String(tag._id);
+          } else if (tag instanceof mongoose.Types.ObjectId) {
+            tagId = tag.toString();
+          } else {
+            tagId = String(tag);
+          }
+        } else {
+          tagId = String(tag);
+        }
+        // Only accumulate time for valid ObjectIds
+        if (mongoose.Types.ObjectId.isValid(tagId)) {
+          timeByTag[tagId] = (timeByTag[tagId] || 0) + time;
+        }
       }
     }
 
